@@ -290,30 +290,40 @@ function displayResults(places, userLocation) {
 
     // Add markers and create hospital cards
     places.forEach((place, index) => {
-        // Add marker to map
+        // Add marker to map with mobile-optimized flag icon
         const marker = new google.maps.Marker({
             position: place.geometry.location,
             map: map,
             title: place.name,
             icon: {
                 url: 'data:image/svg+xml;base64,' + btoa(`
-                    <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 32 32">
-                        <circle cx="16" cy="16" r="15" fill="#dc3545" stroke="white" stroke-width="2"/>
-                        <text x="16" y="20" font-family="Arial" font-size="16" font-weight="bold" text-anchor="middle" fill="white">+</text>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="60" height="30" viewBox="0 0 60 30">
+                        <line x1="3" y1="0" x2="3" y2="30" stroke="#666" stroke-width="2"/>
+                        <path d="M3 3 L48 3 L52 12 L48 21 L3 21 Z" fill="#dc3545" stroke="white" stroke-width="1"/>
+                        <rect x="8" y="8" width="5" height="1.5" fill="white"/>
+                        <rect x="9.5" y="6.5" width="1.5" height="5" fill="white"/>
                     </svg>
                 `),
-                scaledSize: new google.maps.Size(32, 32)
+                scaledSize: new google.maps.Size(60, 30),
+                anchor: new google.maps.Point(3, 30)
             }
         });
 
-        // Add hospital name label below the marker
+        // Add hospital name label for mobile - only show short name
+        const shortName = place.name.length > 6 ? place.name.substring(0, 6) + '..' : place.name;
         const infoLabel = new google.maps.InfoWindow({
-            content: `<div style="font-size: 12px; font-weight: bold; color: #333; text-align: center; padding: 2px 4px;">${place.name}</div>`,
+            content: `<div style="font-size: 10px; font-weight: bold; color: #333; background: rgba(255,255,255,0.95); padding: 1px 4px; border-radius: 3px; border: 1px solid #ccc; box-shadow: 0 1px 3px rgba(0,0,0,0.2);">${shortName}</div>`,
             position: place.geometry.location,
             disableAutoPan: true,
-            pixelOffset: new google.maps.Size(0, 40)
+            pixelOffset: new google.maps.Size(30, -8)
         });
         infoLabel.open(map);
+
+        // Store hospital info for use in click handler
+        marker.hospitalInfo = {
+            name: place.name,
+            vicinity: place.vicinity || place.formatted_address || ''
+        };
 
         markers.push(marker);
 
@@ -359,12 +369,22 @@ function createHospitalCard(place, userLocation) {
         <div class="hospital-name">${place.name}</div>
         <div class="hospital-distance">${distanceText}</div>
         <div class="hospital-address">${place.vicinity}</div>
-        ${place.formatted_phone_number ? `<div class="hospital-phone">📞 ${place.formatted_phone_number}</div>` : ''}
+        ${place.formatted_phone_number ? 
+            `<div class="hospital-phone">
+                <a href="tel:${place.formatted_phone_number}" class="phone-link">
+                    📞 ${place.formatted_phone_number}
+                </a>
+            </div>` : 
+            `<div class="hospital-phone no-phone">📞 電話番号不明</div>`
+        }
         <div class="hospital-actions">
             ${place.formatted_phone_number ? 
-                `<button class="hospital-action-btn phone-btn" onclick="callHospital('${place.formatted_phone_number}')">
+                `<a href="tel:${place.formatted_phone_number}" class="hospital-action-btn phone-btn">
                     📞 電話をかける
-                </button>` : ''
+                </a>` : 
+                `<button class="hospital-action-btn phone-btn disabled" disabled>
+                    📞 電話番号なし
+                </button>`
             }
             <button class="hospital-action-btn map-btn" onclick="openInMaps(${place.geometry.location.lat()}, ${place.geometry.location.lng()}, '${encodeURIComponent(place.name)}')">
                 🗺️ 地図アプリで開く

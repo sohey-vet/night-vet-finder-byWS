@@ -210,7 +210,7 @@ body {
 
 .map {
     width: 100%;
-    height: 300px;
+    height: 250px;
 }
 
 .hospitals-section {
@@ -238,7 +238,7 @@ body {
 .hospital-card {
     border: 1px solid #e9ecef;
     border-radius: 8px;
-    padding: 20px;
+    padding: 16px;
     transition: box-shadow 0.3s ease;
 }
 
@@ -273,9 +273,33 @@ body {
     font-weight: 500;
 }
 
+.phone-link {
+    color: #007BFF;
+    text-decoration: none;
+    font-weight: 600;
+    display: inline-block;
+    padding: 8px 12px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    border: 1px solid #dee2e6;
+    transition: all 0.3s ease;
+}
+
+.phone-link:hover {
+    background: #007BFF;
+    color: white;
+    text-decoration: none;
+}
+
+.no-phone {
+    color: #6c757d;
+    font-style: italic;
+}
+
 .hospital-actions {
     display: flex;
-    gap: 12px;
+    gap: 8px;
+    flex-wrap: wrap;
 }
 
 .hospital-action-btn {
@@ -292,10 +316,25 @@ body {
 .phone-btn {
     background: #dc3545;
     color: white;
+    text-decoration: none;
+    display: inline-block;
+    text-align: center;
 }
 
 .phone-btn:hover {
     background: #c82333;
+    color: white;
+    text-decoration: none;
+}
+
+.phone-btn.disabled {
+    background: #6c757d;
+    color: #adb5bd;
+    cursor: not-allowed;
+}
+
+.phone-btn.disabled:hover {
+    background: #6c757d;
 }
 
 .map-btn {
@@ -385,6 +424,58 @@ body {
     color: #6c757d;
 }
 
+/* Media queries for mobile optimization */
+@media (max-width: 480px) {
+    .main-content {
+        padding: 12px;
+    }
+    
+    .map {
+        height: 200px;
+    }
+    
+    .hospitals-section {
+        padding: 16px;
+    }
+    
+    .hospital-card {
+        padding: 12px;
+    }
+    
+    .hospital-name {
+        font-size: 16px;
+    }
+    
+    .hospital-actions {
+        flex-direction: column;
+        gap: 8px;
+    }
+    
+    .hospital-action-btn {
+        padding: 10px 12px;
+        font-size: 13px;
+    }
+    
+    .phone-link {
+        padding: 6px 10px;
+        font-size: 13px;
+    }
+    
+    .app-title {
+        font-size: 20px;
+    }
+    
+    .search-method-btn {
+        padding: 10px 16px;
+        font-size: 13px;
+    }
+    
+    .search-button {
+        padding: 12px 20px;
+        font-size: 15px;
+    }
+}
+
 /* Media queries for larger screens */
 @media (min-width: 768px) {
     .container {
@@ -418,4 +509,14 @@ body {
     .hospitals-section {
         grid-column: span 2;
     }
+}
+
+/* Google Maps marker label styles */
+.marker-label {
+    background-color: white !important;
+    border: 1px solid #ccc !important;
+    border-radius: 4px !important;
+    padding: 2px 4px !important;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2) !important;
+    white-space: nowrap !important;
 }

@@ -11,6 +11,66 @@
       "allowedTools": [],
       "history": [
         {
+          "display": "続けて",
+          "pastedContents": {}
+        },
+        {
+          "display": "一旦保存してGitHubにアップしておいて",
+          "pastedContents": {}
+        },
+        {
+          "display": "電話番号の表示と、タップしてスマホで電話かけられるようにして",
+          "pastedContents": {}
+        },
+        {
+          "display": "表示結果について。",
+          "pastedContents": {}
+        },
+        {
+          "display": "検索結果は出たけど、スマホで見やすい表示にして",
+          "pastedContents": {}
+        },
+        {
+          "display": "検索結果表示されないよ",
+          "pastedContents": {}
+        },
+        {
+          "display": "検索結果がでないよ",
+          "pastedContents": {}
+        },
+        {
+          "display": "Pinの形状はフラッグっぽいものにして",
+          "pastedContents": {}
+        },
+        {
+          "display": "Pin",
+          "pastedContents": {}
+        },
+        {
+          "display": "APIが読み込まれませんと出てます",
+          "pastedContents": {}
+        },
+        {
+          "display": "検索結果の表示がおかしいままです",
+          "pastedContents": {}
+        },
+        {
+          "display": "git push -u origin main",
+          "pastedContents": {}
+        },
+        {
+          "display": "git branch -M main",
+          "pastedContents": {}
+        },
+        {
+          "display": "git remote add origin https://github.com/sohey-vet/Yakan-AnimalHospital--Guide.git",
+          "pastedContents": {}
+        },
+        {
+          "display": "git commit -m \"初回コミット: 動物病院マップアプリ\"夜間動物救急病院検索アプリ",
+          "pastedContents": {}
+        },
+        {
           "display": "git add .",
           "pastedContents": {}
         },
