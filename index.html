@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Night Vet Finder - 夜間救急動物病院検索</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Header -->
+    <header class="header">
+        <div class="header-content">
+            <h1 class="app-title">Night Vet Finder</h1>
+            <button class="info-button" id="infoButton">
+                <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+            </button>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="main-container">
+        <!-- State 1: Initial Landing / Search Prompt -->
+        <div id="landingState" class="state active">
+            <div class="hero-section">
+                <div class="hero-icon">🏥</div>
+                <h1>夜間救急動物病院検索</h1>
+                <p class="subtitle">ペットの緊急時に、最寄りの夜間対応動物病院を素早く見つけます</p>
+            </div>
+            
+            <div class="search-section">
+                <!-- 現在地検索 -->
+                <button id="search-button" class="search-button">
+                    <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z"></path>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                    </svg>
+                    🚨 現在地から緊急検索
+                </button>
+                
+                <!-- 地名検索 -->
+                <div class="location-search">
+                    <div class="search-input-container">
+                        <input type="text" id="location-input" placeholder="市区町村名を入力（例：渋谷区、福岡市、札幌市）" class="location-input">
+                        <button id="location-search-button" class="location-search-button">
+                            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="info-section">
+                <div class="info-item">
+                    <span class="info-icon">📍</span>
+                    <span>現在地から最寄りの病院を検索</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-icon">🔍</span>
+                    <span>地名入力でも検索可能</span>
+                </div>
+                <div class="info-item">
+                    <span class="info-icon">⏰</span>
+                    <span>夜間・緊急対応の病院のみ表示</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- State 2: Loading -->
+        <div id="loadingState" class="state">
+            <div class="loading-content">
+                <div class="heartbeat-animation">
+                    <svg class="heartbeat" viewBox="0 0 200 50">
+                        <path id="heartbeatPath" d="M10,25 L50,25 L60,5 L70,45 L80,10 L90,40 L100,25 L190,25" 
+                              stroke="#007AFF" stroke-width="2" fill="none"/>
+                    </svg>
+                </div>
+                <p class="loading-text" id="loadingText">GPSで現在地を確認しています...</p>
+            </div>
+        </div>
+
+        <!-- State 3: Search Results -->
+        <div id="resultsState" class="state">
+            <div class="map-container">
+                <div id="map" class="map"></div>
+            </div>
+            <div class="results-container">
+                <h2 class="results-heading">診療中の可能性が高い病院</h2>
+                <div id="hospitalList" class="hospital-list">
+                    <!-- Hospital cards will be dynamically inserted here -->
+                </div>
+                <footer class="disclaimer">
+                    表示される情報はGoogleマップに基づきます。受診前には必ず病院へ直接お電話ください。
+                </footer>
+            </div>
+        </div>
+
+        <!-- State 4: Error / Out of Hours -->
+        <div id="errorState" class="state">
+            <div class="error-content">
+                <div class="error-icon">⚠️</div>
+                <h2 class="error-heading" id="errorHeading">現在、検索時間外です</h2>
+                <p class="error-description" id="errorDescription">
+                    夜間病院の検索は、夜18時から翌朝9時まで可能です。
+                </p>
+                <button class="retry-button" id="retryButton" style="display: none;">
+                    再試行
+                </button>
+                <button class="back-button" id="backButton" style="display: none;">
+                    ← 戻る
+                </button>
+            </div>
+        </div>
+    </main>
+
+    <!-- Info Modal -->
+    <div id="infoModal" class="modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>ご利用について</h3>
+                <button class="close-button" id="closeModal">
+                    <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p>このアプリは緊急時のペット医療施設検索をサポートします。</p>
+                <ul>
+                    <li>検索可能時間：18:00〜翌9:00</li>
+                    <li>表示される情報はGoogleマップに基づきます</li>
+                    <li>受診前には必ず病院へ直接お電話ください</li>
+                    <li>緊急時は最寄りの動物病院にご相談ください</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <script src="config.js"></script>
+    <script async defer src="https://maps.googleapis.com/maps/api/js?key=AIzaSyCfTEK20Bx_JKKXqqOGXU8ef1D2THkC6bg&libraries=places&callback=initGoogleMaps"></script>
+    <script src="script.js"></script>
+</body>
+</html>
