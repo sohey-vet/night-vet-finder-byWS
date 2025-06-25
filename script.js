@@ -1,4 +1,4 @@
-// Night Vet Finder - Main JavaScript File
+// 夜間救急どうぶつ病院検索 - Main JavaScript File
 
 // Google Maps APIの初期化コールバック
 function initGoogleMaps() {
