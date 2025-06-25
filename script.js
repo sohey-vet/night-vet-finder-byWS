@@ -1277,10 +1277,41 @@ class NightVetFinder {
         const todayIndex = today === 0 ? 6 : today - 1; // 日曜日を6に変換
         
         if (openingHours.weekday_text[todayIndex]) {
-            return openingHours.weekday_text[todayIndex].replace(/^[^:]+:\s*/, '');
+            const fullHours = openingHours.weekday_text[todayIndex].replace(/^[^:]+:\s*/, '');
+            
+            // 夜間時間帯（18:00以降）のみを抽出
+            return this.extractNightTimeHours(fullHours);
         }
         
         return '営業時間要確認';
+    }
+
+    extractNightTimeHours(hoursText) {
+        // 「定休日」や「24時間営業」の場合はそのまま返す
+        if (hoursText.includes('定休日') || hoursText.includes('24時間') || hoursText.includes('24 時間')) {
+            return hoursText;
+        }
+        
+        // 時間の範囲を抽出（例：9時00分～12時30分, 16時00分～23時00分）
+        const timeRanges = hoursText.split(',').map(range => range.trim());
+        const nightTimeRanges = [];
+        
+        for (const range of timeRanges) {
+            // 時間範囲をパース（例：16時00分～23時00分）
+            const match = range.match(/(\d{1,2})時(\d{2})分～(\d{1,2})時(\d{2})分/);
+            if (match) {
+                const startHour = parseInt(match[1]);
+                const endHour = parseInt(match[3]);
+                
+                // 18時以降に開始するか、深夜まで営業している場合
+                if (startHour >= 18 || endHour >= 20 || endHour <= 6) {
+                    nightTimeRanges.push(range);
+                }
+            }
+        }
+        
+        // 夜間時間帯がある場合はそれを返す、なければ元の文字列
+        return nightTimeRanges.length > 0 ? nightTimeRanges.join(', ') : hoursText;
     }
 
     calculateDistance(lat1, lng1, lat2, lng2) {
@@ -1324,10 +1355,6 @@ class NightVetFinder {
     createHospitalCard(hospital, index) {
         const distanceText = hospital.distance ? `${parseFloat(hospital.distance).toFixed(1)}km` : '距離不明';
         
-        // 夜間対応バッジの表示判定
-        const nightTimeBadge = hospital.nightScore > 0 ? 
-            `<span class="night-badge">🌙 夜間対応</span>` : '';
-        
         return `
             <div class="hospital-card" data-index="${index}">
                 <div class="hospital-header">
@@ -1336,12 +1363,12 @@ class NightVetFinder {
                         <h3 class="hospital-name">
                             ${hospital.name}
                             <span class="distance-badge">${distanceText}</span>
-                            ${nightTimeBadge}
                         </h3>
                         <p class="hospital-address">${hospital.address || '住所情報なし'}</p>
                         <div class="hospital-details">
                             <p class="hospital-hours">
                                 <span class="detail-label">診察時間:</span> ${hospital.business_hours || '要確認'}
+                                <span class="hours-warning">※要ホームページ確認</span>
                             </p>
                             <p class="hospital-phone">
                                 <span class="detail-label">電話番号:</span> ${hospital.phone || '要確認'}
@@ -1640,17 +1667,14 @@ class NightVetFinder {
             };
         });
         
-        // 夜間スコアでソート（高い順）
+        // 距離順でソート（夜間スコアは表示用のみ）
         const sortedHospitals = prioritizedHospitals.sort((a, b) => {
-            if (a.nightScore !== b.nightScore) {
-                return b.nightScore - a.nightScore; // 夜間スコア順
-            }
-            return parseFloat(a.distance) - parseFloat(b.distance); // 距離順
+            return parseFloat(a.distance) - parseFloat(b.distance); // 距離順（近い順）
         });
         
-        console.log('🌙 フィルタリング結果:');
+        console.log('🌙 フィルタリング結果（距離順）:');
         sortedHospitals.forEach((hospital, index) => {
-            console.log(`${index + 1}. ${hospital.name} (夜間スコア: ${hospital.nightScore}, 距離: ${hospital.distance}km)`);
+            console.log(`${index + 1}. ${hospital.name} (距離: ${hospital.distance}km, 夜間スコア: ${hospital.nightScore})`);
         });
         
         return sortedHospitals;
