@@ -15,13 +15,18 @@ class NightVetFinder {
         this.markers = [];
         this.infoWindows = [];
         this.service = null; // Places service
+        this.isSearching = false; // 検索中フラグ
         
         this.showLandingState();
     }
 
     showLandingState() {
+        console.log('🏠 ランディング状態に戻ります');
+        this.isSearching = false; // 検索をキャンセル
+        console.log('🚫 検索フラグをfalseに設定:', this.isSearching);
         this.hideAllStates();
         document.getElementById('landingState').classList.add('active');
+        console.log('✅ ランディング状態表示完了');
     }
 
     hideAllStates() {
@@ -40,6 +45,7 @@ class NightVetFinder {
             return;
         }
 
+        this.isSearching = true; // 検索開始フラグ
         this.showLoadingState();
         this.searchByLocationName(locationName);
     }
@@ -47,6 +53,12 @@ class NightVetFinder {
     // 地名から座標を取得して検索
     async searchByLocationName(locationName) {
         try {
+            // キャンセルチェック
+            if (!this.isSearching) {
+                console.log('🚫 検索がキャンセルされました');
+                return;
+            }
+            
             // まずローカルの地名データから検索
             let coordinates = this.getCoordinatesFromLocationName(locationName);
             
@@ -55,7 +67,14 @@ class NightVetFinder {
                 coordinates = await this.geocodeLocation(locationName);
             }
             
+            // キャンセルチェック
+            if (!this.isSearching) {
+                console.log('🚫 検索がキャンセルされました');
+                return;
+            }
+            
             if (!coordinates) {
+                this.isSearching = false;
                 this.showErrorState(
                     '指定された地名が見つかりませんでした',
                     '別の地名を試すか、現在地検索をご利用ください。',
@@ -72,12 +91,15 @@ class NightVetFinder {
             } else {
                 // APIが読み込まれていない場合はモックデータを使用
                 setTimeout(() => {
-                    this.useMockData();
+                    if (this.isSearching) {
+                        this.useMockData();
+                    }
                 }, 1000);
             }
             
         } catch (error) {
             console.error('地名検索エラー:', error);
+            this.isSearching = false;
             this.showErrorState('検索エラー', '検索中にエラーが発生しました。もう一度お試しください。', true);
         }
     }
@@ -1068,6 +1090,12 @@ class NightVetFinder {
 
     // モックデータを使用してテスト（APIキーなしでのデモ用）
     useMockData() {
+        // キャンセルチェック
+        if (!this.isSearching) {
+            console.log('🚫 検索がキャンセルされました');
+            return;
+        }
+        
         const mockHospitals = [
             {
                 name: '東京夜間動物病院',
@@ -1126,53 +1154,110 @@ class NightVetFinder {
     processHospitalResults(results) {
         console.log('🔄 病院結果を処理中:', results.length + '件');
         
+        // キャンセルチェック
+        if (!this.isSearching) {
+            console.log('🚫 検索がキャンセルされました');
+            return;
+        }
+        
         // 詳細情報を取得するためのPromiseを作成
-        const detailPromises = results.map(place => {
+        const detailPromises = results.map((place, index) => {
             return new Promise((resolve) => {
-                const service = new google.maps.places.PlacesService(document.getElementById('map'));
-                
-                // Place Details APIで詳細情報を取得
-                service.getDetails({
-                    placeId: place.place_id,
-                    fields: ['name', 'formatted_phone_number', 'formatted_address', 'rating', 'opening_hours', 'website']
-                }, (details, status) => {
-                    const distance = this.calculateDistance(
-                        this.userLocation.lat,
-                        this.userLocation.lng,
-                        place.geometry.location.lat(),
-                        place.geometry.location.lng()
-                    );
-
-                    const hospitalData = {
-                        name: place.name,
-                        address: place.vicinity || place.formatted_address || '住所不明',
-                        phone: details && details.formatted_phone_number ? details.formatted_phone_number : '電話番号要確認',
-                        rating: place.rating || 0,
-                        distance: distance.toFixed(1),
-                        lat: place.geometry.location.lat(),
-                        lng: place.geometry.location.lng(),
-                        isOpen: place.opening_hours ? place.opening_hours.open_now : null,
+                // レート制限を避けるため、少し遅延を追加
+                setTimeout(() => {
+                    const service = new google.maps.places.PlacesService(document.getElementById('map'));
+                    
+                    // Place Details APIで詳細情報を取得
+                    service.getDetails({
                         placeId: place.place_id,
-                        website: details && details.website ? details.website : null,
-                        business_hours: details && details.opening_hours ? this.formatOpeningHours(details.opening_hours) : '営業時間要確認'
-                    };
+                        fields: ['name', 'formatted_phone_number', 'formatted_address', 'rating', 'opening_hours', 'website']
+                    }, (details, status) => {
+                        console.log('📋 Place Details API呼び出し:', place.name);
+                        console.log('📊 Status:', status);
+                        console.log('📞 Details:', details);
+                        
+                        let hospitalData;
+                        
+                        if (status === google.maps.places.PlacesServiceStatus.OK && details) {
+                            console.log('✅ 詳細取得成功:', {
+                                name: details.name,
+                                phone: details.formatted_phone_number,
+                                website: details.website
+                            });
+                            
+                            const distance = this.calculateDistance(
+                                this.userLocation.lat,
+                                this.userLocation.lng,
+                                place.geometry.location.lat(),
+                                place.geometry.location.lng()
+                            );
 
-                    console.log('📞 病院詳細取得:', hospitalData.name, '電話:', hospitalData.phone);
-                    resolve(hospitalData);
-                });
+                            hospitalData = {
+                                name: place.name,
+                                address: place.vicinity || place.formatted_address || '住所不明',
+                                phone: details.formatted_phone_number || '電話番号要確認',
+                                rating: place.rating || 0,
+                                distance: distance.toFixed(1),
+                                lat: place.geometry.location.lat(),
+                                lng: place.geometry.location.lng(),
+                                isOpen: place.opening_hours ? place.opening_hours.open_now : null,
+                                placeId: place.place_id,
+                                website: details.website || null,
+                                business_hours: details.opening_hours ? this.formatOpeningHours(details.opening_hours) : '営業時間要確認'
+                            };
+                        } else {
+                            console.warn('⚠️ 詳細取得失敗、基本情報を使用:', status, 'for', place.name);
+                            
+                            // Place Details APIが失敗した場合は基本情報のみ使用
+                            const distance = this.calculateDistance(
+                                this.userLocation.lat,
+                                this.userLocation.lng,
+                                place.geometry.location.lat(),
+                                place.geometry.location.lng()
+                            );
+
+                            hospitalData = {
+                                name: place.name,
+                                address: place.vicinity || place.formatted_address || '住所不明',
+                                phone: '電話番号要確認',
+                                rating: place.rating || 0,
+                                distance: distance.toFixed(1),
+                                lat: place.geometry.location.lat(),
+                                lng: place.geometry.location.lng(),
+                                isOpen: place.opening_hours ? place.opening_hours.open_now : null,
+                                placeId: place.place_id,
+                                website: null,
+                                business_hours: '営業時間要確認'
+                            };
+                        }
+
+                        console.log('📞 最終的な病院データ:', hospitalData.name, '電話:', hospitalData.phone);
+                        resolve(hospitalData);
+                    });
+                }, index * 200); // インデックスに基づいて遅延時間を調整
             });
         });
 
         // すべての詳細情報取得が完了したら表示
         Promise.all(detailPromises).then(hospitals => {
-            this.hospitals = hospitals.sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance));
+            // キャンセルチェック
+            if (!this.isSearching) {
+                console.log('🚫 検索がキャンセルされました');
+                return;
+            }
             
-            console.log('✅ 処理完了:', this.hospitals.length + '件の病院（電話番号含む）');
+            // 夜間対応病院を優先的にフィルタリング
+            const filteredHospitals = this.filterNightTimeHospitals(hospitals);
+            
+            this.hospitals = filteredHospitals;
+            
+            console.log('✅ 処理完了:', this.hospitals.length + '件の病院（夜間対応優先）');
 
             if (this.hospitals.length === 0) {
+                this.isSearching = false;
                 this.showErrorState(
-                    '近くに病院が見つかりませんでした',
-                    '検索範囲を広げるか、別の地域で検索してください。',
+                    '夜間対応の病院が見つかりませんでした',
+                    '範囲を広げて再検索するか、モックデータで確認してください。',
                     true
                 );
                 return;
@@ -1239,6 +1324,10 @@ class NightVetFinder {
     createHospitalCard(hospital, index) {
         const distanceText = hospital.distance ? `${parseFloat(hospital.distance).toFixed(1)}km` : '距離不明';
         
+        // 夜間対応バッジの表示判定
+        const nightTimeBadge = hospital.nightScore > 0 ? 
+            `<span class="night-badge">🌙 夜間対応</span>` : '';
+        
         return `
             <div class="hospital-card" data-index="${index}">
                 <div class="hospital-header">
@@ -1247,6 +1336,7 @@ class NightVetFinder {
                         <h3 class="hospital-name">
                             ${hospital.name}
                             <span class="distance-badge">${distanceText}</span>
+                            ${nightTimeBadge}
                         </h3>
                         <p class="hospital-address">${hospital.address || '住所情報なし'}</p>
                         <div class="hospital-details">
@@ -1310,6 +1400,7 @@ class NightVetFinder {
     }
 
     showResultsState() {
+        this.isSearching = false; // 検索完了
         this.hideAllStates();
         document.getElementById('resultsState').classList.add('active');
     }
@@ -1502,18 +1593,79 @@ class NightVetFinder {
         `;
     }
 
+    // 夜間対応病院をフィルタリング
+    filterNightTimeHospitals(hospitals) {
+        console.log('🌙 夜間対応病院をフィルタリング中...');
+        
+        const currentHour = new Date().getHours();
+        const isNightTime = currentHour >= 18 || currentHour < 9; // 18時〜翌9時を夜間とする
+        
+        console.log('⏰ 現在時刻:', currentHour + '時', isNightTime ? '(夜間)' : '(日中)');
+        
+        // 夜間対応の可能性が高い病院を優先
+        const nightTimeKeywords = [
+            '夜間', '救急', '24時間', '24H', '緊急', 'emergency', 
+            'ナイト', 'night', '深夜', '時間外'
+        ];
+        
+        const prioritizedHospitals = hospitals.map(hospital => {
+            let nightScore = 0;
+            
+            // 病院名に夜間関連キーワードが含まれているかチェック
+            const hospitalName = hospital.name.toLowerCase();
+            nightTimeKeywords.forEach(keyword => {
+                if (hospitalName.includes(keyword.toLowerCase())) {
+                    nightScore += 10;
+                }
+            });
+            
+            // 現在営業中の場合はスコアアップ
+            if (hospital.isOpen === true) {
+                nightScore += 5;
+            }
+            
+            // 営業時間に夜間対応の文字が含まれている場合
+            const businessHours = hospital.business_hours.toLowerCase();
+            if (businessHours.includes('24') || 
+                businessHours.includes('夜間') || 
+                businessHours.includes('救急') ||
+                businessHours.includes('時間外')) {
+                nightScore += 8;
+            }
+            
+            return {
+                ...hospital,
+                nightScore: nightScore,
+                isNightTimeRelevant: nightScore > 0
+            };
+        });
+        
+        // 夜間スコアでソート（高い順）
+        const sortedHospitals = prioritizedHospitals.sort((a, b) => {
+            if (a.nightScore !== b.nightScore) {
+                return b.nightScore - a.nightScore; // 夜間スコア順
+            }
+            return parseFloat(a.distance) - parseFloat(b.distance); // 距離順
+        });
+        
+        console.log('🌙 フィルタリング結果:');
+        sortedHospitals.forEach((hospital, index) => {
+            console.log(`${index + 1}. ${hospital.name} (夜間スコア: ${hospital.nightScore}, 距離: ${hospital.distance}km)`);
+        });
+        
+        return sortedHospitals;
+    }
+
     // 現在地検索を開始
     startCurrentLocationSearch() {
         console.log('📍 現在地検索を開始します');
+        this.isSearching = true; // 検索開始フラグ
         this.showLoadingState();
         
         if (!navigator.geolocation) {
             console.error('❌ Geolocation APIが利用できません');
-            this.showErrorState(
-                '位置情報が利用できません',
-                'お使いのブラウザは位置情報機能をサポートしていません。地名検索をご利用ください。',
-                false
-            );
+            this.isSearching = false;
+            this.showErrorState('位置情報が利用できません', 'お使いのブラウザは位置情報機能をサポートしていません。地名検索をご利用ください。', false);
             return;
         }
 
@@ -1527,6 +1679,11 @@ class NightVetFinder {
 
         navigator.geolocation.getCurrentPosition(
             (position) => {
+                if (!this.isSearching) {
+                    console.log('🚫 検索がキャンセルされました');
+                    return;
+                }
+                
                 this.userLocation = {
                     lat: position.coords.latitude,
                     lng: position.coords.longitude
@@ -1535,7 +1692,13 @@ class NightVetFinder {
                 this.searchNearbyHospitals();
             },
             (error) => {
+                if (!this.isSearching) {
+                    console.log('🚫 検索がキャンセルされました');
+                    return;
+                }
+                
                 console.error('❌ 位置情報取得エラー:', error);
+                this.isSearching = false;
                 let errorMessage = '位置情報の取得に失敗しました。';
                 
                 switch(error.code) {
@@ -1559,42 +1722,86 @@ class NightVetFinder {
     searchNearbyHospitals() {
         console.log('🔍 病院検索開始:', this.userLocation);
         
+        // キャンセルチェック
+        if (!this.isSearching) {
+            console.log('🚫 検索がキャンセルされました');
+            return;
+        }
+        
         const mapElement = document.getElementById('map');
         if (!mapElement) {
             console.error('❌ マップ要素が見つかりません');
+            this.isSearching = false;
             this.showErrorState('マップエラー', 'マップの初期化に失敗しました。');
             return;
         }
 
         const service = new google.maps.places.PlacesService(mapElement);
         
-        // まず動物病院を検索
-        const request = {
+        // 夜間対応病院を優先的に検索
+        const nightEmergencyRequest = {
             location: this.userLocation,
-            radius: 10000, // 10km
-            keyword: '動物病院'
+            radius: 20000, // 20km（夜間病院は少ないため範囲を広げる）
+            keyword: '夜間 救急 動物病院'
         };
 
-        console.log('📋 検索リクエスト:', request);
+        console.log('🌙 夜間救急動物病院検索リクエスト:', nightEmergencyRequest);
+
+        service.nearbySearch(nightEmergencyRequest, (results, status) => {
+            // キャンセルチェック
+            if (!this.isSearching) {
+                console.log('🚫 検索がキャンセルされました');
+                return;
+            }
+            
+            console.log('🌙 夜間救急検索結果:', { status, resultCount: results ? results.length : 0 });
+            
+            if (status === google.maps.places.PlacesServiceStatus.OK && results && results.length > 0) {
+                console.log('✅ 夜間救急動物病院が見つかりました:', results.length + '件');
+                this.processHospitalResults(results);
+            } else {
+                console.log('⚠️ 夜間救急動物病院が見つからないため、24時間動物病院を検索します');
+                this.search24HourHospitals();
+            }
+        });
+    }
+
+    // 24時間動物病院検索（フォールバック）
+    search24HourHospitals() {
+        console.log('🕰️ 24時間動物病院検索開始');
+        
+        // キャンセルチェック
+        if (!this.isSearching) {
+            console.log('🚫 検索がキャンセルされました');
+            return;
+        }
+        
+        const mapElement = document.getElementById('map');
+        const service = new google.maps.places.PlacesService(mapElement);
+        
+        const request = {
+            location: this.userLocation,
+            radius: 25000, // 25km
+            keyword: '24時間 動物病院'
+        };
+
+        console.log('🕰️ 24時間動物病院検索リクエスト:', request);
 
         service.nearbySearch(request, (results, status) => {
-            console.log('📊 検索結果:', { status, resultCount: results ? results.length : 0 });
+            console.log('🕰️ 24時間動物病院検索結果:', { status, resultCount: results ? results.length : 0 });
             
-            if (status === google.maps.places.PlacesServiceStatus.OK) {
-                if (results && results.length > 0) {
-                    console.log('✅ 動物病院が見つかりました:', results.length + '件');
-                    this.processHospitalResults(results);
-                } else {
-                    console.log('⚠️ 動物病院が見つからないため、一般病院を検索します');
-                    this.searchGeneralHospitals();
-                }
+            // キャンセルチェック
+            if (!this.isSearching) {
+                console.log('🚫 検索がキャンセルされました');
+                return;
+            }
+            
+            if (status === google.maps.places.PlacesServiceStatus.OK && results && results.length > 0) {
+                console.log('✅ 24時間動物病院が見つかりました:', results.length + '件');
+                this.processHospitalResults(results);
             } else {
-                console.error('❌ 検索エラー:', status);
-                if (status === 'REQUEST_DENIED') {
-                    this.showErrorState('APIエラー', 'Google Places APIの利用が拒否されました。APIキーの設定を確認してください。');
-                } else {
-                    this.showErrorState('検索エラー', `検索中にエラーが発生しました: ${status}`);
-                }
+                console.log('⚠️ 24時間動物病院が見つからないため、一般病院を検索します');
+                this.searchGeneralHospitals();
             }
         });
     }
@@ -1603,17 +1810,31 @@ class NightVetFinder {
     searchGeneralHospitals() {
         console.log('🏥 一般病院検索開始');
         
+        // キャンセルチェック
+        if (!this.isSearching) {
+            console.log('🚫 検索がキャンセルされました');
+            return;
+        }
+        
         const mapElement = document.getElementById('map');
         const service = new google.maps.places.PlacesService(mapElement);
         
         const request = {
             location: this.userLocation,
-            radius: 15000, // 15km
+            radius: 30000, // 30km
             type: ['hospital']
         };
 
+        console.log('🏥 一般病院検索リクエスト:', request);
+
         service.nearbySearch(request, (results, status) => {
             console.log('🏥 一般病院検索結果:', { status, resultCount: results ? results.length : 0 });
+            
+            // キャンセルチェック
+            if (!this.isSearching) {
+                console.log('🚫 検索がキャンセルされました');
+                return;
+            }
             
             if (status === google.maps.places.PlacesServiceStatus.OK && results && results.length > 0) {
                 console.log('✅ 一般病院が見つかりました:', results.length + '件');
@@ -1652,11 +1873,25 @@ document.addEventListener('DOMContentLoaded', () => {
 
     const backButton = document.getElementById('backButton');
     if (backButton) {
-        backButton.addEventListener('click', () => app.showLandingState());
+        backButton.addEventListener('click', () => {
+            console.log('🔙 戻るボタンがクリックされました');
+            app.showLandingState();
+        });
     }
 
     const currentLocationButton = document.getElementById('current-location-button');
     if (currentLocationButton) {
         currentLocationButton.addEventListener('click', () => app.startCurrentLocationSearch());
+    }
+
+    // 検索中状態の戻るボタン
+    const loadingBackButton = document.getElementById('loadingBackButton');
+    if (loadingBackButton) {
+        loadingBackButton.addEventListener('click', () => {
+            console.log('🔙 戻るボタンがクリックされました');
+            app.showLandingState();
+        });
+    } else {
+        console.error('❌ loadingBackButton要素が見つかりません');
     }
 });

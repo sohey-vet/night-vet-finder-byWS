@@ -287,14 +287,26 @@ body {
 }
 
 .distance-badge {
-    display: inline-block;
-    background-color: rgba(0, 122, 255, 0.2);
-    color: #007AFF;
-    padding: 4px 12px;
-    border-radius: 20px;
+    background: #4A90E2;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 12px;
     font-size: 12px;
     font-weight: 500;
     margin-left: 8px;
+}
+
+.night-badge {
+    background: #FF6B35;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+    margin-left: 8px;
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
 }
 
 .hospital-address {
@@ -355,19 +367,18 @@ body {
 .action-button .icon {
     width: 14px;
     height: 14px;
-    flex-shrink: 0;
 }
 
-.action-button.disabled {
-    background-color: #404040 !important;
-    color: #808080 !important;
-    cursor: not-allowed !important;
-    opacity: 0.6;
+.action-button:disabled {
+    background: #3A3A3A;
+    color: #808080;
+    cursor: not-allowed;
+    transform: none;
 }
 
-.action-button.disabled:hover {
-    transform: none !important;
-    box-shadow: none !important;
+.action-button:disabled:hover {
+    background: #3A3A3A;
+    transform: none;
 }
 
 /* スマホ用の調整 */
@@ -434,19 +445,34 @@ body {
 }
 
 .back-button {
-    background: #6C757D;
-    color: white;
-    border: none;
-    padding: 12px 24px;
-    border-radius: 8px;
-    font-size: 16px;
+    background: #FF4444;
+    color: #FFFFFF;
+    border: 1px solid #FF6666;
+    border-radius: 12px;
+    padding: 12px 20px;
+    font-size: 14px;
+    font-weight: 500;
     cursor: pointer;
-    margin-top: 10px;
-    margin-left: 10px;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-top: 24px;
+    min-width: 120px;
+    position: relative;
+    z-index: 1000;
 }
 
 .back-button:hover {
-    background: #5A6268;
+    background: #FF3333;
+    border-color: #FF6666;
+    transform: translateY(-1px);
+}
+
+.back-button .icon {
+    width: 16px;
+    height: 16px;
 }
 
 /* Footer */
