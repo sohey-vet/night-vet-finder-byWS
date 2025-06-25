@@ -1126,39 +1126,76 @@ class NightVetFinder {
     processHospitalResults(results) {
         console.log('🔄 病院結果を処理中:', results.length + '件');
         
-        this.hospitals = results.map(place => {
-            const distance = this.calculateDistance(
-                this.userLocation.lat,
-                this.userLocation.lng,
-                place.geometry.location.lat(),
-                place.geometry.location.lng()
-            );
+        // 詳細情報を取得するためのPromiseを作成
+        const detailPromises = results.map(place => {
+            return new Promise((resolve) => {
+                const service = new google.maps.places.PlacesService(document.getElementById('map'));
+                
+                // Place Details APIで詳細情報を取得
+                service.getDetails({
+                    placeId: place.place_id,
+                    fields: ['name', 'formatted_phone_number', 'formatted_address', 'rating', 'opening_hours', 'website']
+                }, (details, status) => {
+                    const distance = this.calculateDistance(
+                        this.userLocation.lat,
+                        this.userLocation.lng,
+                        place.geometry.location.lat(),
+                        place.geometry.location.lng()
+                    );
 
-            return {
-                name: place.name,
-                address: place.vicinity || place.formatted_address || '住所不明',
-                phone: place.formatted_phone_number || '電話番号不明',
-                rating: place.rating || 0,
-                distance: distance.toFixed(1),
-                lat: place.geometry.location.lat(),
-                lng: place.geometry.location.lng(),
-                isOpen: place.opening_hours ? place.opening_hours.open_now : null,
-                placeId: place.place_id
-            };
-        }).sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance));
+                    const hospitalData = {
+                        name: place.name,
+                        address: place.vicinity || place.formatted_address || '住所不明',
+                        phone: details && details.formatted_phone_number ? details.formatted_phone_number : '電話番号要確認',
+                        rating: place.rating || 0,
+                        distance: distance.toFixed(1),
+                        lat: place.geometry.location.lat(),
+                        lng: place.geometry.location.lng(),
+                        isOpen: place.opening_hours ? place.opening_hours.open_now : null,
+                        placeId: place.place_id,
+                        website: details && details.website ? details.website : null,
+                        business_hours: details && details.opening_hours ? this.formatOpeningHours(details.opening_hours) : '営業時間要確認'
+                    };
 
-        console.log('✅ 処理完了:', this.hospitals.length + '件の病院');
+                    console.log('📞 病院詳細取得:', hospitalData.name, '電話:', hospitalData.phone);
+                    resolve(hospitalData);
+                });
+            });
+        });
 
-        if (this.hospitals.length === 0) {
-            this.showErrorState(
-                '近くに病院が見つかりませんでした',
-                '検索範囲を広げるか、別の地域で検索してください。',
-                true
-            );
-            return;
+        // すべての詳細情報取得が完了したら表示
+        Promise.all(detailPromises).then(hospitals => {
+            this.hospitals = hospitals.sort((a, b) => parseFloat(a.distance) - parseFloat(b.distance));
+            
+            console.log('✅ 処理完了:', this.hospitals.length + '件の病院（電話番号含む）');
+
+            if (this.hospitals.length === 0) {
+                this.showErrorState(
+                    '近くに病院が見つかりませんでした',
+                    '検索範囲を広げるか、別の地域で検索してください。',
+                    true
+                );
+                return;
+            }
+
+            this.displayHospitalResults();
+        });
+    }
+
+    formatOpeningHours(openingHours) {
+        if (!openingHours || !openingHours.weekday_text) {
+            return '営業時間要確認';
         }
-
-        this.displayHospitalResults();
+        
+        // 今日の営業時間を取得
+        const today = new Date().getDay();
+        const todayIndex = today === 0 ? 6 : today - 1; // 日曜日を6に変換
+        
+        if (openingHours.weekday_text[todayIndex]) {
+            return openingHours.weekday_text[todayIndex].replace(/^[^:]+:\s*/, '');
+        }
+        
+        return '営業時間要確認';
     }
 
     calculateDistance(lat1, lng1, lat2, lng2) {
@@ -1229,12 +1266,20 @@ class NightVetFinder {
                         </svg>
                         電話する
                     </a>
-                    <a href="#" class="action-button">
-                        <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9v-9m0-9v9"></path>
-                        </svg>
-                        ホームページ
-                    </a>
+                    ${hospital.website ? 
+                        `<a href="${hospital.website}" target="_blank" class="action-button">
+                            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9v-9m0-9v9"></path>
+                            </svg>
+                            ホームページ
+                        </a>` : 
+                        `<span class="action-button disabled">
+                            <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9v-9m0-9v9"></path>
+                            </svg>
+                            ホームページなし
+                        </span>`
+                    }
                     <a href="https://www.google.com/maps/dir/?api=1&destination=${hospital.lat},${hospital.lng}" 
                        target="_blank" class="action-button">
                         <svg class="icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">

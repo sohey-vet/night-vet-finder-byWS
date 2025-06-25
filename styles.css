@@ -358,6 +358,18 @@ body {
     flex-shrink: 0;
 }
 
+.action-button.disabled {
+    background-color: #404040 !important;
+    color: #808080 !important;
+    cursor: not-allowed !important;
+    opacity: 0.6;
+}
+
+.action-button.disabled:hover {
+    transform: none !important;
+    box-shadow: none !important;
+}
+
 /* スマホ用の調整 */
 @media (max-width: 480px) {
     .action-buttons {
