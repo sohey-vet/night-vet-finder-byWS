@@ -1,38 +1,17 @@
-# API Keys and Secrets (重要！)
-config.local.js
-.env
-*.key
-*.secret
+# APIキーなどの機密情報を含む設定ファイル
+config.js
 
-# System and cache files
-.cache/
-.claude/
-.npm/
-.vscode-server*/
-.config/
-.dotnet/
-.bash_history
-.bash_logout
-.bashrc
-.profile
-.motd_shown
-.sudo_as_admin_successful
-*-update-notifier-last-checked
-
-# Node modules
-node_modules/
-
-# OS files
+# OS固有のファイル
 .DS_Store
 Thumbs.db
 
-# IDE files
+# IDEやエディタの設定ファイル
 .vscode/
 .idea/
 
-# Log files
-*.log
+# Node.jsの依存関係フォルダ (もしあれば)
+node_modules/
 
-# Temporary files
-*.tmp
-*.temp
+# ビルド成果物 (もしあれば)
+dist/
+build/
